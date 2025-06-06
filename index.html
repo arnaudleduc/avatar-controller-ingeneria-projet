@@ -16,25 +16,61 @@
         background-size: 230px 230px;
         font-family: Arial, sans-serif;
       }
-      .container {
+
+      @media screen and (max-width: 767px) {
+        html,
+        body {
+          overflow: hidden !important;
+          height: 100vh !important;
+        }
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+          box-sizing: border-box;
+          display: block !important;
+          background-size: 130px 130px;
+        }
+      }
+
+      .main-container {
         background-color: white;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
       }
+
+      @media screen and (max-width: 767px) {
+        .main-container {
+          width: 100vw !important;
+          min-width: 100vw !important;
+          max-width: 100vw !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          position: static !important;
+          top: 0 !important;
+        }
+      }
+
       h1 {
         text-align: center;
         color: #333;
       }
+
+      @media screen and (max-width: 767px) {
+        h1 {
+          font-size: 25px;
+          margin: 40px auto 70px auto;
+        }
+      }
     </style>
   </head>
   <body>
-    <div class="container">
+    <div class="main-container">
       <h1>Avatar Controller</h1>
       <avatar-controller
         modelUrl="/models/avatar_arnaudL.glb"
-        width="600"
-        height="600"
       ></avatar-controller>
     </div>
     <script type="module" src="/src/main.ts"></script>

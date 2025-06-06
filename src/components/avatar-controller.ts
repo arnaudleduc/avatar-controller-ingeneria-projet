@@ -12,15 +12,6 @@ export class AvatarController extends LitElement {
   @property({ type: String })
   modelUrl = "";
 
-  @property({ type: Number })
-  width = 400;
-
-  @property({ type: Number })
-  height = 400;
-
-  @property({ type: Boolean })
-  autoplay = false;
-
   // État interne
   @state()
   private _isLoading = false;
@@ -30,6 +21,12 @@ export class AvatarController extends LitElement {
 
   @state()
   private _modelLoaded = false;
+
+  @state()
+  private _width = 600;
+
+  @state()
+  private _height = 600;
 
   // Références aux objets Three.js
   private _scene: THREE.Scene | null = null;
@@ -54,13 +51,68 @@ export class AvatarController extends LitElement {
       height: 100%;
     }
 
+    @media screen and (max-width: 767px) {
+      :host {
+        display: block;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+      }
+      .container {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        flex-direction: column;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        position: relative;
+      }
+      #three-canvas {
+        width: 100vw !important;
+        display: flex;
+        justify-content: center;
+      }
+      .controls {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        max-width: 100vw;
+        display: flex;
+        gap: 10px;
+        z-index: 1;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+      button {
+        font-size: 14px;
+      }
+    }
+
     .loading {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 1.2em;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: black;
+      font-size: 25px;
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
+      z-index: 2;
+    }
+
+    .loading.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .controls {
@@ -121,6 +173,8 @@ export class AvatarController extends LitElement {
   // Méthodes du cycle de vie
   firstUpdated() {
     this._initScene();
+    this._handleResize();
+    window.addEventListener("resize", this._handleResize.bind(this));
   }
 
   updated(changedProperties: Map<string, any>) {
@@ -137,6 +191,32 @@ export class AvatarController extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this._cleanup();
+    window.removeEventListener("resize", this._handleResize.bind(this));
+  }
+
+  private _handleResize() {
+    if (window.innerWidth <= 767) {
+      // En mobile, on prend la largeur de l'écran
+      this._width = window.innerWidth;
+      // On calcule la hauteur en gardant le ratio 1:1
+      this._height = this._width;
+      // Si la hauteur dépasse 80vh, on ajuste
+      if (this._height > window.innerHeight * 0.8) {
+        this._height = window.innerHeight * 0.8;
+        this._width = this._height;
+      }
+    } else {
+      // En desktop, on garde les dimensions par défaut
+      this._width = 600;
+      this._height = 600;
+    }
+
+    // Mise à jour du renderer et de la caméra
+    if (this._renderer && this._camera) {
+      this._renderer.setSize(this._width, this._height);
+      this._camera.aspect = this._width / this._height;
+      this._camera.updateProjectionMatrix();
+    }
   }
 
   // Méthodes privées
@@ -147,7 +227,7 @@ export class AvatarController extends LitElement {
     // Configuration de la caméra
     this._camera = new THREE.PerspectiveCamera(
       75,
-      this.width / this.height,
+      this._width / this._height,
       0.1,
       1000
     );
@@ -155,7 +235,7 @@ export class AvatarController extends LitElement {
 
     // Configuration du renderer
     this._renderer = new THREE.WebGLRenderer({ antialias: true });
-    this._renderer.setSize(this.width, this.height);
+    this._renderer.setSize(this._width, this._height);
     this._renderer.setPixelRatio(window.devicePixelRatio);
     // Configuration HDR
     this._renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -241,7 +321,6 @@ export class AvatarController extends LitElement {
             this._animationNames.push(animation.name);
           }
         });
-        // Log des animations disponibles
       } else {
         console.log("Aucune animation trouvée dans ce modèle.");
       }
@@ -262,6 +341,13 @@ export class AvatarController extends LitElement {
       console.error("Erreur lors du chargement du modèle:", error);
     } finally {
       this._isLoading = false;
+      // Ajouter la classe hidden pour déclencher l'animation de fade-out
+      requestAnimationFrame(() => {
+        const loadingElement = this.shadowRoot?.querySelector(".loading");
+        if (loadingElement) {
+          loadingElement.classList.add("hidden");
+        }
+      });
     }
   }
 
@@ -351,12 +437,11 @@ export class AvatarController extends LitElement {
   // Template du composant
   render() {
     return html`
-      <div
-        class="container"
-        style="width: ${this.width}px; height: ${this.height}px;"
-      >
+      <div class="container" style="${this._getContainerStyle()}">
         <div id="three-canvas"></div>
-        ${this._isLoading ? html`<div class="loading">Chargement...</div>` : ""}
+        <div class="loading ${!this._isLoading ? "hidden" : ""}">
+          Chargement...
+        </div>
         <div class="controls">
           ${this._animationNames.map(
             (name) => html`
@@ -371,5 +456,12 @@ export class AvatarController extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private _getContainerStyle() {
+    if (window.innerWidth <= 767) {
+      return `width: 100vw; height: ${this._height}px;`;
+    }
+    return `width: ${this._width}px; height: ${this._height}px;`;
   }
 }
